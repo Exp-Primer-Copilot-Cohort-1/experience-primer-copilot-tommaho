@@ -1,31 +1,47 @@
 //create web server
 const express = require('express');
 const app = express();
-const port = 3000;
+const path = require('path');
+const bodyParser = require('body-parser');
+const jsonParser = bodyParser.json();
+const mongoose = require('mongoose');
+const {Comment} = require('./models');
+const {DATABASE_URL, PORT} = require('./config');
 
-//set view engine
-app.set('view engine', 'ejs');
-
-//set public folder
 app.use(express.static('public'));
 
-//use body parser
-app.use(express.urlencoded({ extended: true }));
-
-//use method override
-const methodOverride = require('method-override');
-app.use(methodOverride('_method'));
-
-//connect to mongoose
-const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:27017/blog', { useNewUrlParser: true, useUnifiedTopology: true });
-
-//define schema
-const blogSchema = new mongoose.Schema({
-    title: String,
-    image: String,
-    body: String,
-    created: { type: Date, default: Date.now },
+//GET request
+app.get('/comments', (req, res) => {
+  Comment
+    .find()
+    .limit(10)
+    .then(comments => {
+      res.json({
+        comments: comments.map(
+          (comment) => comment.serialize())
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      res.status(500).json({message: 'Internal server error'})
+    });
 });
-const Blog = mongoose.model('Blog', blogSchema);
 
+//POST request
+app.post('/comments', jsonParser, (req, res) => {
+  const requiredFields = ['title', 'content', 'author'];
+  //check if all required fields are present
+  for (let i = 0; i < requiredFields.length; i++) {
+    const field = requiredFields[i];
+    //if any field is missing, send error message
+    if (!(field in req.body)) {
+      const message = `Missing \'${field}\' in request body`;
+      console.error(message);
+      return res.status(400).send(message);
+    }
+  }
+
+  Comment
+    .create({
+      title: req.body.title,
+      content: req.body.content,
