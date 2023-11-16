@@ -29,4 +29,3 @@ const blogSchema = new mongoose.Schema({
 });
 const Blog = mongoose.model('Blog', blogSchema);
 
-const commentSchema = new mongoose.Schema({
